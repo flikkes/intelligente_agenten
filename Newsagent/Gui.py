@@ -8,27 +8,22 @@ top.geometry("600x1200")
 
 
 
-search = Entry(top)
-search.place(x=50, y=50)
-
-listBox = Listbox(top)
-listBox.place(x=50, y = 150)
-
-results = Listbox(top)
-results.place(x=50, y=800)
 
 categories = crawlCategories()
 for category in categories:
-    listBox.insert(END, category['name']+': '+category['url'])
+    catBtn = Button(top, text=category['name'], command=lambda name = category['url']:crawlCallback(name))
+    catBtn.pack()
 
-def searchCallBack():
-    results.delete(0, listBox.size())
-    teasers = crawlTeasers(search.get())
+results = Listbox(top, width=400, height=300)
+results.pack()
+
+def crawlCallback(url):
+    print(url)
+    results.delete(0, results.size())
+    teasers = crawlTeasers(url)
+    print(teasers)
     for teaser in teasers:
-        results.insert(END, teaser['title']+': '+teaser['text'])
-        
-btn = Button (top, text = "Go", command = searchCallBack)
-btn.place(x=250, y=50)
-
+        results.insert(END, teaser['title'])
+        results.insert(END, teaser['text'])
 
 top.mainloop()

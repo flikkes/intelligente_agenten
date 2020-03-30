@@ -26,6 +26,7 @@ def crawlTeasers(url):
     articles = soup.findAll('article')
     teasers = []
     for article in articles:
+        print(article)
         h3 = article.find('h3')
         titleParts = h3.findAll('span')
         title = titleParts[len(titleParts)-1]
@@ -33,7 +34,3 @@ def crawlTeasers(url):
         if p is not None and title is not None:
             teasers.append({'title':title.string, 'text':p.string})
     return teasers
-
-categories = crawlCategories()
-print(categories)
-print(crawlTeasers(categories[0]['url']))
