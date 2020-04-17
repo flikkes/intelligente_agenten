@@ -58,6 +58,9 @@ class Labyrinth:
         self.fields[y][x] = 4
         return True
 
+    def isWalkable(self, x, y):
+        return not self.isVisited(x, y) and not self.isWall(x, y)
+
     def __isInBoundaries(self, x, y):
         if y < 0 or y >= len(self.fields):
             return False
