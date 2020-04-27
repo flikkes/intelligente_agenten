@@ -17,37 +17,73 @@ class Table:
         return False
     
     def stack(self, x, y):
-        if not self.on(x):
-            if not self.on(y):
-                if self.onTable(y):
-                    if not self.__finish:
-                        self.__table.remove(y)
-                        self.__finish.append(y)
-                        self.__finish.append(x)
-                        self.__removeFromStart(x)
-                        self.__removeFromTable(x)
-                if y in self.__finish:
+        if self.clear(x) and self.clear(y):
+            if self.onTable(y):
+                if not self.__finish:
+                    self.__finish.append(y)
                     self.__finish.append(x)
+                    self.__removeFromTable(y)
                     self.__removeFromStart(x)
                     self.__removeFromTable(x)
+                    return True
+            if y in self.__finish:
+                self.__finish.append(x)
+                self.__removeFromStart(x)
+                self.__removeFromTable(x)
+                return True
+            if  y in self.__start:
+                self.__start.append(x)
+                self.__removeFromFinish(x)
+                self.__removeFromTable(x)
+                return True
+        return False
 
     def __removeFromTable(self, x):
         if x in self.__table:
             self.__table.remove(x)
+            return True
+        return False
 
     def __removeFromStart(self, x):
         if x in self.__start:
             self.__start.remove(x)
+            return True
+        return False
+
+    def __removeFromFinish(self, x):
+        if x in self.__finish:
+            self.__finish.remove(x)
+            return True
+        return False            
             
-            
-    def on(self, x):
-        if x in __start:
-            return __start[-1] == x
-        if x in __table:
-            return False
-        if x in __finish:
-            return __finish[-1] == x
+    def clear(self, x):
+        if x in self.__start:
+            return self.__start[-1] == x
+        if x in self.__table:
+            return True
+        if x in self.__finish:
+            return self.__finish[-1] == x
         return False
     
     def onTable(self, x):
-        return x in __table
+        return x in self.__table
+
+    def on(self, x, y):
+        if x in self.__start:
+            return self.__on(x, y, self.__start)
+        if x in self.__finish:
+            return self.__on(x, y, self.__finish)
+        return False
+
+
+    def __on(self, x, y, arr):
+        xIndex = arr.index(x)
+        return arr.index(y) == xIndex-1
+
+    def putDown(self, x):
+        if self.clear(x):
+            self.__table.append(x)
+            self.__removeFromStart(x)
+            self.__removeFromFinish(x)
+            return True
+        return False
