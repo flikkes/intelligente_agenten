@@ -10,7 +10,7 @@ class World:
         self.table = table
         self.finish = finish
 
-    def ontable(self, x):
+    def onground(self, x):
         if self.start:
             if self.start[0] == x:
                 return True

@@ -1,21 +1,26 @@
 import Agent
 import Blockworld
 from Agent import Agent
-from Blockworld import Table
+from Blockworld import World
 
-table = Table(['A', 'C', 'D'], [], ['B'])
-agent = Agent(table, ['A', 'C', 'B', 'D'])
+world = World(['D', 'A', 'C'], [], ['B'])
+goal = World(['D', 'A'], [], ['B', 'C'])
+agent = Agent(world, goal)
+print('=========== UNSOLVED ===========')
+print('World Start: '+str(world.start))
+print('World Table: '+str(world.table))
+print('World Finish: '+str(world.finish))
 
-print('World Start: '+str(table.start))
-print('World Table: '+str(table.table))
-print('World Finish: '+str(table.finish))
+print('Goal Start: '+str(goal.start))
+print('Goal Table: '+str(goal.table))
+print('Goal Finish: '+str(goal.finish))
 
-print('Goal: '+str(agent.goal))
+agent.fulfillGoal()
+print('=========== SOLVED ===========')
+print('World Start: '+str(world.start))
+print('World Table: '+str(world.table))
+print('World Finish: '+str(world.finish))
 
-agent.reachGoal()
-
-print('World Start: '+str(table.start))
-print('World Table: '+str(table.table))
-print('World Finish: '+str(table.finish))
-
-print('Goal: '+str(agent.goal))
+print('Goal Start: '+str(goal.start))
+print('Goal Table: '+str(goal.table))
+print('Goal Finish: '+str(goal.finish))

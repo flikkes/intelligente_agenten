@@ -10,45 +10,155 @@ class Agent:
         self.world = world
         self.goal = goal
 
-    def fulfillGroundGoal(self):
-        x = self.getInitialBlock()
-        while x != 'GND':
-            nextBlock = self.getBlockUnder(x)
-            if self.world.pickup(x):
-                ## TODO check here if x on ground or on other position and react accordingly
-                while not self.world.onground(x):
-                    stackBackOn = self.getClearBlockFromOtherStack(x)
-                    self.world.stack(x, stackBackOn)
-                    blockToMoveAway = self.getClearBlockFromOtherStack(x)
-                    blockToMoveTo = self.getClearBlockFromOtherStack(x, blockToMoveAway)
-                    self.world.pickup(blockToMoveAway)
-                    self.world.stack(blockToMoveAway, blockToMoveTo)
-                    self.world.pickup(x)
-                    self.world.putdown(x)
-                if self.goal.onground(x):
-                    x = nextBlock
+    def fulfillGoal(self):
+        if self.matchesGoal():
+            return True
+        self.putAllOnStart()
+        badCache = []
+        lastGoodBlock = 'GND'
+        lastTrashBlock = 'GND'
+        while self.world.start:
+            if self.matchesGoal():
+                return True
+            x = self.getClearBlockOfStack(self.world.start)
+            self.raiseBlock(x)
+            if self.goal.onground(x) and self.world.putdown(x):
+                if lastGoodBlock != 'GND':
+                    lastTrashBlock = x
                 else:
-                    self.world.pickup(x)
-                    clearBlock = self.getClearBlockFromOtherStack(x)
+                    lastGoodBlock = x
+            elif self.goal.on(x, lastGoodBlock):
+                self.world.stack(x, lastGoodBlock)
+                lastGoodBlock = x
+            else:
+                if lastTrashBlock == 'GND':
+                    self.world.putdown(x)
+                else:
+                    self.world.stack(x, lastTrashBlock)
+                lastTrashBlock = x
+        if self.matchesGoal():
+                return True
+        while not self.matchesGoal():
+            if lastTrashBlock in self.world.table:
+                lastTrashBlock = 'GND'
+                while self.world.table:
+                    if self.matchesGoal():
+                        return True
+                    x = self.getClearBlockOfStack(self.world.table)
+                    self.raiseBlock(x)
+                    if self.goal.onground(x):
+                        self.world.putdown(x)
+                        lastGoodBlock = x
+                    elif self.goal.on(x, lastGoodBlock):
+                        self.world.stack(x, lastGoodBlock)
+                        lastGoodBlock = x
+                    else:
+                        if lastTrashBlock == 'GND':
+                            self.world.putdown(x)
+                        else:
+                            self.world.stack(x, lastTrashBlock)
+                        lastTrashBlock = x
+            else:
+                lastTrashBlock = 'GND'
+                while self.world.finish:
+                    if self.matchesGoal():
+                        return True
+                    x = self.getClearBlockOfStack(self.world.finish)
+                    self.raiseBlock(x)
+                    if self.goal.onground(x):
+                        self.world.putdown(x)
+                        lastGoodBlock = x
+                    elif self.goal.on(x, lastGoodBlock):
+                        self.world.stack(x, lastGoodBlock)
+                        lastGoodBlock = x
+                    else:
+                        if lastTrashBlock == 'GND':
+                            self.world.putdown(x)
+                        else:
+                            self.world.stack(x, lastTrashBlock)
+                        lastTrashBlock = x
+            self.swapWithUnderlying(lastTrashBlock)
+        return True
+            
+    def swapWithUnderlying(self, x):
+        moveTo = self.getClearBlockFromOtherStack(x)
+        underX = self.getBlockUnder(x)
+        if underX == 'GND':
+            return
+        self.raiseBlock(x)
+        self.world.stack(x, moveTo)
+        moveTo = self.getClearBlockFromOtherStack(x, underX)
+        self.raiseBlock(underX)
+        self.world.stack(underX, moveTo)
+        moveTo = self.getClearBlockFromOtherStack(x, underX)
+        self.raiseBlock(x)
+        self.world.stack(x, moveTo)
+        self.raiseBlock(underX)
+        self.world.stack(underX, x)
+        return True
+        
+
+    def matchesGoal(self):
+        if self.goal.start == self.world.start:
+            if self.goal.table == self.world.table:
+                if self.goal.finish == self.world.finish:
+                    return True
+            if self.goal.table == self.world.finish:
+                if self.goal.finish == self.world.table:
+                    return True
+        if self.goal.start == self.world.table:
+            if self.goal.table == self.world.start:
+                if self.goal.finish == self.world.finish:
+                    return True
+            if self.goal.table == self.world.finish:
+                if self.goal.finish == self.world.start:
+                    return True
+        if self.goal.start == self.world.finish:
+            if self.goal.table == self.world.start:
+                if self.goal.finish == self.world.table:
+                    return True
+            if self.goal.table == self.world.table:
+                if self.goal.finish == self.world.start:
+                    return True
+        return False
+    
+    def putAllOnStart(self):
+        clearBlock = self.getClearBlockOfStack(self.world.start)
+        while self.world.table:
+            for x in self.world.table:
+                if self.raiseBlock(x):
                     if clearBlock == 'GND':
                         self.world.putdown(x)
-                    else: 
+                    else:
                         self.world.stack(x, clearBlock)
-                    x = nextBlock
-                    
-    def getInitialBlock(self):
-        if self.world.start:
-            for x in self.world.start:
-                if self.world.clear(x):
-                    return x
-        if self.world.table:
-            for x in self.world.table:
-                if self.world.clear(x):
-                    return x
-        if self.world.finish:
+                    clearBlock = x
+        while self.world.finish:
             for x in self.world.finish:
+                if self.raiseBlock(x):
+                    if clearBlock == 'GND':
+                        self.world.putdown(x)
+                    else:
+                        self.world.stack(x, clearBlock)
+                    clearBlock = x
+
+    def raiseBlock(self, x):
+        if not self.world.clear(x):
+            return False
+        underX = self.getBlockUnder(x)
+        if underX != 'GND':
+            self.world.unstack(x, underX)
+        else:
+            self.world.pickup(x)
+        return True
+        
+
+
+    def getClearBlockOfStack(self, stack):
+        if stack:
+            for x in stack:
                 if self.world.clear(x):
                     return x
+        return 'GND'
 
 
     def getClearBlockFromOtherStack(self, x1, x2):
