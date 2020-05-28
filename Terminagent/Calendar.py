@@ -14,9 +14,21 @@ class Calendar:
             {LOWER_BOUND_KEY: 8.0, UPPER_BOUND_KEY: 18.0, APPOINTMENTS_KEY: []}
         ]
 
-    
+    def canBookAppointment(self, hours):
+        for i in range(len(self.timeData)):
+            if self.getFreeHoursOfDay(i) >= hours:
+                return True
+        return False
 
-    def bookAppointment(self, day, hours):
+
+    def bookAppointment(self, hours):
+        for i in range(len(self.timeData)):
+            if self.getFreeHoursOfDay(i) >= hours:
+                self.bookAppointmentByDay(i, hours)
+                return True
+        return False
+
+    def bookAppointmentByDay(self, day, hours):
         dayData = self.timeData[day]
         upper = dayData[self.UPPER_BOUND_KEY]
         lower = dayData[self.LOWER_BOUND_KEY]

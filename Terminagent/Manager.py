@@ -1,33 +1,49 @@
 import socket
 from Calendar import Calendar
 
+
 class Manager:
     HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
     PORT = 65430        # Port to listen on (non-privileged ports are > 1023)
+    AGENT_COUNT = 3
     calendar = Calendar()
-    
-    def listen(self):
+    addr = None
+    conn = None
+
+    def __init__(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((self.HOST, self.PORT))
-        s.listen()
-        conn, addr = s.accept()
-        with conn:
-            print('Connected by {}'.format(addr))
-            while True:
-                data = conn.recv(1024)
-                if not data:
-                    break
-                if data.startswith('BOOKING:'):
-                    timeToBook = float(data.replace('BOOKING:', ''))
-                    for i in range(6):
-                        timeAvailable = self.calendar.getFreeHoursOfDay(i)
-                        if timeAvailable >= timeToBook and self.checkOtherAgents(i, timeToBook):
-                            self.calendar.bookAppointment(i, timeToBook)
-                            break
-## add missing logic
+            s.bind((self.HOST, self.PORT))
+            s.listen()
+            self.conn, self.addr = s.accept()
 
-                print('Checking for {} free hours in week'.format(int(data)))
-                conn.sendall(data)
+    def listen(self):
+        print('Connected by {}'.format(self.addr))
+        data = str(self.conn.recv(1024))
+        if data.startswith('BOOKING:'):
+            timeToBook = float(data.replace('BOOKING:', ''))
+            if self.calendar.canBookAppointment(timeToBook):
+                if self.checkOtherAgents(timeToBook, self.conn):
+                    self.calendar.bookAppointment(timeToBook)
+                    self.bookOtherAgents(timeToBook, self.conn)
 
-    def checkOtherAgents(self, day, timeNeeded):
-        print('checking...')
+    def checkOtherAgents(self, timeNeeded, conn):
+        conn.sendall(str.encode('CHECK:{}'.format(timeNeeded)))
+        responseCount = 0
+        possible = True
+        while responseCount < self.AGENT_COUNT:
+            response = str(conn.recv(1024))
+            if response.startswith('RESPONSE:'):
+                responseCount += 1
+                responseValue = bool(response.replace('RESPONSE:', ''))
+                if not responseValue:
+                    possible = False
+        return possible
+
+    def bookOtherAgents(self, hours, conn):
+        conn.sendall(str.encode('BOOKING:{}'.format(hours)))
+
+
+manager = Manager()
+
+while True:
+    manager.listen()
