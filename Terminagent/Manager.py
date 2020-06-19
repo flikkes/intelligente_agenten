@@ -1,26 +1,33 @@
 import socket
+import tkinter
+import threading
+from tkinter import *
+from tkinter import messagebox
 from Calendar import Calendar
 
 
 class Manager:
     HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
     PORT = 65430        # Port to listen on (non-privileged ports are > 1023)
-    AGENT_COUNT = 3
+    AGENT_COUNT = 1
     calendar = Calendar()
+    socket = None
     addr = None
     conn = None
 
     def __init__(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((self.HOST, self.PORT))
-            s.listen()
-            self.conn, self.addr = s.accept()
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.bind((self.HOST, self.PORT))
 
     def listen(self):
-        print('Connected by {}'.format(self.addr))
+        print("Listening...")
+        self.socket.listen(1)
+        
+        self.conn, self.addr = self.socket.accept()
         data = str(self.conn.recv(1024))
         if data.startswith('BOOKING:'):
             timeToBook = float(data.replace('BOOKING:', ''))
+            print("Received booking over {} hours".format(timeToBook))
             if self.calendar.canBookAppointment(timeToBook):
                 if self.checkOtherAgents(timeToBook, self.conn):
                     self.calendar.bookAppointment(timeToBook)
@@ -42,8 +49,26 @@ class Manager:
     def bookOtherAgents(self, hours, conn):
         conn.sendall(str.encode('BOOKING:{}'.format(hours)))
 
+    def issueBooking(self, hours):
+        if self.calendar.canBookAppointment(hours):
+            if self.checkOtherAgents(hours, self.conn):
+                self.calendar.bookAppointment(hours)
+                self.bookOtherAgents(hours, self.conn)
+
 
 manager = Manager()
 
-while True:
-    manager.listen()
+top = tkinter.Tk()
+top.geometry("300x500")
+
+bookingHours = Entry(top)
+bookingHours.pack()
+
+bookButton = Button(top, text="Make booking", command=lambda: manager.issueBooking(float(bookingHours.get())))
+bookButton.pack()
+
+t1 = threading.Thread(target=manager.listen)
+t1.start()
+t0 = threading.Thread(target = top.mainloop)
+t0.run()
+

@@ -17,7 +17,8 @@ class Agent:
         badCache = []
         lastGoodBlock = 'GND'
         lastTrashBlock = 'GND'
-        while self.world.start:
+        while self.world.start and not self.partiallyMatchesGoal(self.world.start):
+            print('test1')
             if self.matchesGoal():
                 return True
             x = self.getClearBlockOfStack(self.world.start)
@@ -39,9 +40,11 @@ class Agent:
         if self.matchesGoal():
                 return True
         while not self.matchesGoal():
+            print('test2')
             if lastTrashBlock in self.world.table:
                 lastTrashBlock = 'GND'
-                while self.world.table:
+                while self.world.table and not self.partiallyMatchesGoal(self.world.table):
+                    print('test3')
                     if self.matchesGoal():
                         return True
                     x = self.getClearBlockOfStack(self.world.table)
@@ -52,20 +55,26 @@ class Agent:
                     elif self.goal.on(x, lastGoodBlock):
                         self.world.stack(x, lastGoodBlock)
                         lastGoodBlock = x
+                    elif self.goal.on(x, self.getClearBlockFromOtherStack(x, lastGoodBlock)):
+                        self.world.stack(x, self.getClearBlockFromOtherStack(x, lastGoodBlock))
+                        lastGoodBlock = x
                     else:
                         if lastTrashBlock == 'GND':
                             self.world.putdown(x)
+                            break
                         else:
                             self.world.stack(x, lastTrashBlock)
                         lastTrashBlock = x
             else:
                 lastTrashBlock = 'GND'
                 while self.world.finish:
+                    print('test4')
                     if self.matchesGoal():
                         return True
                     x = self.getClearBlockOfStack(self.world.finish)
                     self.raiseBlock(x)
                     if self.goal.onground(x):
+                        print('test5')
                         self.world.putdown(x)
                         lastGoodBlock = x
                     elif self.goal.on(x, lastGoodBlock):
@@ -81,7 +90,7 @@ class Agent:
         return True
             
     def swapWithUnderlying(self, x):
-        moveTo = self.getClearBlockFromOtherStack(x)
+        moveTo = self.getClearBlockFromOtherStack(x, None)
         underX = self.getBlockUnder(x)
         if underX == 'GND':
             return
@@ -121,6 +130,9 @@ class Agent:
                 if self.goal.finish == self.world.start:
                     return True
         return False
+    
+    def partiallyMatchesGoal(self, part):
+        return part == self.goal.start[:len(part)] or part == self.goal.table[:len(part)] or part == self.goal.finish[:len(part)]
     
     def putAllOnStart(self):
         clearBlock = self.getClearBlockOfStack(self.world.start)

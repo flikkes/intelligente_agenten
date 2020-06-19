@@ -7,16 +7,16 @@ def crawlWeather(city):
     response = requests.get(url)
     text = response.text
     soup = BeautifulSoup(text, features="html.parser")
-    dailyForecasts = soup.findAll('div', class_='forecast-item-day')
-
+    dailyForecasts = soup.findAll('div', class_=['base-box--level-0', 'weather-daybox'])
     result = []
 
     for dailyForecastString in dailyForecasts:
         daySoup = BeautifulSoup(str(dailyForecastString), features="html.parser")
-        dayName = daySoup.find('div', class_='text-day').string
-        maxTemp = daySoup.find('span', class_='wt-color-temperature-max').string
-        minTemp = daySoup.find('span', class_='wt-color-temperature-min').string
+        print(daySoup)
+        dayName = daySoup.find('div', class_='weather-daybox__date__weekday').string
+        maxTemp = daySoup.find('div', class_='weather-daybox__minMax__max').string
+        minTemp = daySoup.find('div', class_='weather-daybox__minMax__max').string
         forecastDict = {"day": dayName, "max": maxTemp, "min": minTemp}
         result.append(forecastDict)
 
-    return result;
+    return result
