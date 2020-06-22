@@ -22,8 +22,10 @@ class Agent:
             data = self.s.recv(1024).decode()
             if data.startswith('BOOKING:'):
                 newTimeData = json.loads(data.replace('BOOKING:', ''))
+                print('Reveived calendar update:\n\n{}\n\n'.format(newTimeData))
                 self.calendar = Calendar(newTimeData)
             elif data.startswith('CHECK:'):
+                print('Received check request, reponding with calendar')
                 self.s.sendall(str.encode('RESPONSE:{}'.format(json.dumps(self.calendar.timeData))))
 
     def issueBooking(self, hours):
@@ -36,6 +38,7 @@ agent = Agent()
 
 top = tkinter.Tk()
 top.geometry("300x500")
+top.title("Agent")
 
 bookingHours = Entry(top)
 bookingHours.pack()

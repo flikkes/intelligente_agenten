@@ -11,7 +11,7 @@ from Calendar import Calendar
 class Manager:
     HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
     PORT = 65430        # Port to listen on (non-privileged ports are > 1023)
-    AGENT_COUNT = 3
+    agentCount = 0
     calendar = Calendar()
     socket = None
     respondingClients = []
@@ -27,7 +27,9 @@ class Manager:
             conn, addr = self.socket.accept()
             print('New connection accepted from {}'.format(addr))
             self.connections.add(conn)
-            thread = threading.Thread(target=self.processConnection, args=(conn,))
+            self.agentCount += 1
+            print('Added an agent - current agent count: {}'.format(self.agentCount))
+            thread = threading.Thread(target=self.processConnection, args=[conn])
             thread.start()
             
 
@@ -37,13 +39,16 @@ class Manager:
             data = conn.recv(1024).decode()
             if data.startswith('BOOKING:'):
                 timeToBook = float(data.replace('BOOKING:', ''))
-                self.issueBooking(timeToBook)
+                thread = threading.Thread(target = self.issueBooking, args = [timeToBook])
+                thread.start()
             elif data.startswith('RESPONSE:'):
                 responseValue = json.loads(data.replace('RESPONSE:', ''))
                 clientCalendar = Calendar(responseValue)
                 self.respondingClients.append({'conn': conn, 'calendar': clientCalendar})
 
         self.connections.remove(conn)
+        self.agentCount -= 1
+        print('Removed an agent - current agent count: {}'.format(self.agentCount))
         conn.close()
 
     def issueBooking(self, hours):
@@ -60,10 +65,10 @@ class Manager:
         possible = True
         respondingClients = []
 
-        while len(self.respondingClients) < self.AGENT_COUNT and timeoutCount < 3:
+        while len(self.respondingClients) < self.agentCount and timeoutCount < 3:
             print('waiting for response')
             timeoutCount += 1
-            time.sleep(100)
+            time.sleep(3)
 
         for rc in self.respondingClients:
             conn = rc['conn']
@@ -76,7 +81,8 @@ class Manager:
                 conn = rc['conn']
                 clientCalendar = rc['calendar']
                 clientCalendar.bookAppointment(timeNeeded)
-                conn.sendall('BOOKING:{}'.format(json.dumps(clientCalendar)).encode())
+                print('Sending updated calendar back to {}'.format(conn.getpeername()))
+                conn.sendall('BOOKING:{}'.format(json.dumps(clientCalendar.timeData)).encode())
 
         self.respondingClients = []
         return possible
@@ -86,6 +92,7 @@ manager = Manager()
 
 top = tkinter.Tk()
 top.geometry("300x500")
+top.title("Manager")
 
 bookingHours = Entry(top)
 bookingHours.pack()
