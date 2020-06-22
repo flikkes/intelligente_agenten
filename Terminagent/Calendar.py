@@ -14,6 +14,10 @@ class Calendar:
             {LOWER_BOUND_KEY: 8.0, UPPER_BOUND_KEY: 18.0, APPOINTMENTS_KEY: []}
         ]
 
+    def __init__(self, timeData = None):
+        if not timeData is None:
+            self.timeData = timeData
+
     def canBookAppointment(self, hours):
         for i in range(len(self.timeData)):
             if self.getFreeHoursOfDay(i) >= hours:
@@ -37,6 +41,7 @@ class Calendar:
         appointment = {'start':lower, 'end':lower+hours}
         self.timeData[day][self.APPOINTMENTS_KEY].append(appointment)
         self.timeData[day][self.LOWER_BOUND_KEY] = lower+hours
+        print('\n========\nAppointment was booked for day {} with {} hours.\nCurrent time data:\n{}\n========\n'.format(day, hours, self.timeData))
         return appointment
 
     def getFreeHoursOfDay(self, day):

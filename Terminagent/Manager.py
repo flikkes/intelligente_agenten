@@ -1,6 +1,8 @@
 import socket
 import tkinter
 import threading
+import time
+import json
 from tkinter import *
 from tkinter import messagebox
 from Calendar import Calendar
@@ -9,51 +11,75 @@ from Calendar import Calendar
 class Manager:
     HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
     PORT = 65430        # Port to listen on (non-privileged ports are > 1023)
-    AGENT_COUNT = 1
+    AGENT_COUNT = 3
     calendar = Calendar()
     socket = None
-    addr = None
-    conn = None
-
-    def __init__(self):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind((self.HOST, self.PORT))
+    respondingClients = []
+    connections = set()
 
     def listen(self):
-        print("Listening...")
-        self.socket.listen(1)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.bind((self.HOST, self.PORT))
         
-        self.conn, self.addr = self.socket.accept()
-        data = str(self.conn.recv(1024))
-        if data.startswith('BOOKING:'):
-            timeToBook = float(data.replace('BOOKING:', ''))
-            print("Received booking over {} hours".format(timeToBook))
-            if self.calendar.canBookAppointment(timeToBook):
-                if self.checkOtherAgents(timeToBook, self.conn):
-                    self.calendar.bookAppointment(timeToBook)
-                    self.bookOtherAgents(timeToBook, self.conn)
+        print("Listening...")
+        while True:
+            self.socket.listen(1)
+            conn, addr = self.socket.accept()
+            print('New connection accepted from {}'.format(addr))
+            self.connections.add(conn)
+            thread = threading.Thread(target=self.processConnection, args=(conn,))
+            thread.start()
+            
 
-    def checkOtherAgents(self, timeNeeded, conn):
-        conn.sendall(str.encode('CHECK:{}'.format(timeNeeded)))
-        responseCount = 0
-        possible = True
-        while responseCount < self.AGENT_COUNT:
-            response = str(conn.recv(1024))
-            if response.startswith('RESPONSE:'):
-                responseCount += 1
-                responseValue = bool(response.replace('RESPONSE:', ''))
-                if not responseValue:
-                    possible = False
-        return possible
+    def processConnection(self, conn):
+        print('Processing new connection {}'.format(conn))
+        while True:
+            data = conn.recv(1024).decode()
+            if data.startswith('BOOKING:'):
+                timeToBook = float(data.replace('BOOKING:', ''))
+                self.issueBooking(timeToBook)
+            elif data.startswith('RESPONSE:'):
+                responseValue = json.loads(data.replace('RESPONSE:', ''))
+                clientCalendar = Calendar(responseValue)
+                self.respondingClients.append({'conn': conn, 'calendar': clientCalendar})
 
-    def bookOtherAgents(self, hours, conn):
-        conn.sendall(str.encode('BOOKING:{}'.format(hours)))
+        self.connections.remove(conn)
+        conn.close()
 
     def issueBooking(self, hours):
+        print('Booking request received for {} hours'.format(hours))
         if self.calendar.canBookAppointment(hours):
-            if self.checkOtherAgents(hours, self.conn):
+            if self.tryBookingAllClients(hours):
+                print('Booking is possible')
                 self.calendar.bookAppointment(hours)
-                self.bookOtherAgents(hours, self.conn)
+
+    def tryBookingAllClients(self, timeNeeded):
+        for conn in self.connections:
+            conn.sendall(str.encode('CHECK:'))
+        timeoutCount = 0
+        possible = True
+        respondingClients = []
+
+        while len(self.respondingClients) < self.AGENT_COUNT and timeoutCount < 3:
+            print('waiting for response')
+            timeoutCount += 1
+            time.sleep(100)
+
+        for rc in self.respondingClients:
+            conn = rc['conn']
+            clientCalendar = rc['calendar']
+            if not clientCalendar.canBookAppointment(timeNeeded):
+                possible = False   
+                
+        if (possible):
+            for rc in self.respondingClients:
+                conn = rc['conn']
+                clientCalendar = rc['calendar']
+                clientCalendar.bookAppointment(timeNeeded)
+                conn.sendall('BOOKING:{}'.format(json.dumps(clientCalendar)).encode())
+
+        self.respondingClients = []
+        return possible
 
 
 manager = Manager()
@@ -67,8 +93,8 @@ bookingHours.pack()
 bookButton = Button(top, text="Make booking", command=lambda: manager.issueBooking(float(bookingHours.get())))
 bookButton.pack()
 
-t1 = threading.Thread(target=manager.listen)
+t1 = threading.Thread(target = manager.listen)
+t1.daemon = True
 t1.start()
-t0 = threading.Thread(target = top.mainloop)
-t0.run()
+top.mainloop()
 

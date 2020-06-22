@@ -1,5 +1,10 @@
 import socket
+import tkinter
+import threading
+import json
 from Calendar import Calendar
+from tkinter import *
+from tkinter import messagebox
 
 
 class Agent:
@@ -9,27 +14,36 @@ class Agent:
     calendar = Calendar()
     s = None
 
-    def __init__(self):
+    def listen(self):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect((self.HOST, self.PORT))
 
-    def listen(self):
-        data = str(self.s.recv(1024))
-        if data.startswith('BOOKING:'):
-            timeToBook = float(data.replace('BOOKING:', ''))
-            if self.calendar.canBookAppointment(timeToBook):
-                self.calendar.bookAppointment(timeToBook)
-        elif data.startswith('CHECK:'):
-            timeToCheck = float(data.replace('CHECK:', ''))
-            if self.calendar.canBookAppointment(timeToCheck):
-                self.s.send('RESPONSE:True')
+        while True:
+            data = self.s.recv(1024).decode()
+            if data.startswith('BOOKING:'):
+                newTimeData = json.loads(data.replace('BOOKING:', ''))
+                self.calendar = Calendar(newTimeData)
+            elif data.startswith('CHECK:'):
+                self.s.sendall(str.encode('RESPONSE:{}'.format(json.dumps(self.calendar.timeData))))
 
     def issueBooking(self, hours):
         if self.calendar.canBookAppointment(hours):
-            self.s.send(str.encode('BOOKING:{}'.format(hours)))
+            self.s.sendall(str.encode('BOOKING:{}'.format(hours)))
+        else:
+            print('Booking not possible for timeslot of {} hours'.format(hours))
 
 agent = Agent()
 
-agent.issueBooking(3.0)
-while True:
-    agent.listen()
+top = tkinter.Tk()
+top.geometry("300x500")
+
+bookingHours = Entry(top)
+bookingHours.pack()
+
+bookButton = Button(top, text="Make booking", command=lambda: agent.issueBooking(float(bookingHours.get())))
+bookButton.pack()
+
+t1 = threading.Thread(target = agent.listen)
+t1.daemon = True
+t1.start()
+top.mainloop()
