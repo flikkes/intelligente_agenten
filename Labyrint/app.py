@@ -3,6 +3,7 @@ from Labyrinth import Labyrinth
 import time
 import tkinter
 import sys
+import os
 from tkinter import *
 
 sizeX = int(sys.argv[1])
@@ -14,8 +15,12 @@ finishY = int(sys.argv[6])
 
 labyrinth = Labyrinth(sizeX, sizeY, startX, startY, finishX, finishY)
 
+def close_completely():
+    os._exit(0)
+
 top = tkinter.Tk()
 top.geometry("500x500")
+top.protocol("WM_DELETE_WINDOW", close_completely)
 
 canvas = Canvas(top, height=len(labyrinth.fields) *
                 15, width=len(labyrinth.fields[0])*15)
@@ -38,6 +43,7 @@ def callback():
                 fill = "#5334eb"
             canvas.create_rectangle(j*15, i*15, j*15+8, i*15+8, fill=fill)
     top.update()
+
 
 
 callback()

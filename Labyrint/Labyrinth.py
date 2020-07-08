@@ -7,6 +7,7 @@ class Labyrinth:
     dimension = {"x": 0, "y": 0}
     startx = 0
     starty = 0
+    finished = False
 
     def __init__(self, x=15, y=15, startx=4, starty=0, finishx=2, finishy=9):
         self.dimension["x"] = x
@@ -47,15 +48,17 @@ class Labyrinth:
                 if not moves:
                     backTrack += 1
                     backIndex = len(path)-backTrack
-                    if backIndex < 0 and not initial:
+                    if backIndex > len(path)-1 or backIndex < 0 and not initial:
                         return path
+                    if  backIndex < 0 or not path:
+                        return self.drawRandomPath(startx, starty, finishx, finishy, initial)
                     backTrackedPosition = path[backIndex]
                     moves = self.getPossibleMoves(backTrackedPosition["x"], backTrackedPosition["y"])
             cx = move["x"]
             cy = move["y"]
             if cx == startx and cy == starty:
                 self.fields[cy][cx] = 2
-            elif cx == finishx and cy == finishy:
+            elif cx == finishx and cy == finishy and initial:
                 self.fields[cy][cx] = 3
             else:
                 self.fields[cy][cx] = 0

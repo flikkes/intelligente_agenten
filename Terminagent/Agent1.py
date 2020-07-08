@@ -37,7 +37,7 @@ class Agent:
 agent = Agent()
 
 top = tkinter.Tk()
-top.geometry("300x500")
+top.geometry("500x800")
 top.title("Agent")
 
 bookingHours = Entry(top)
@@ -46,7 +46,20 @@ bookingHours.pack()
 bookButton = Button(top, text="Make booking", command=lambda: agent.issueBooking(float(bookingHours.get())))
 bookButton.pack()
 
+days = Listbox(top, width=300, height=600)
+days.pack()
+
 t1 = threading.Thread(target = agent.listen)
 t1.daemon = True
 t1.start()
 top.mainloop()
+
+def updateDays(calendar):
+    days.delete(0)
+    days.insert(END, "MO: {} hours booked".format(10 - calendar.getFreeHoursOfDay(0)))
+    days.insert(END, "DI: {} hours booked".format(10 - calendar.getFreeHoursOfDay(1)))
+    days.insert(END, "MI: {} hours booked".format(10 - calendar.getFreeHoursOfDay(2)))
+    days.insert(END, "DO: {} hours booked".format(10 - calendar.getFreeHoursOfDay(3)))
+    days.insert(END, "FR: {} hours booked".format(10 - calendar.getFreeHoursOfDay(4)))
+    days.insert(END, "SA: {} hours booked".format(10 - calendar.getFreeHoursOfDay(5)))
+    days.insert(END, "SO: {} hours booked".format(10 - calendar.getFreeHoursOfDay(6)))

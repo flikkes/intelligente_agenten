@@ -22,11 +22,15 @@ class Agent:
 
     def explore(self):
         self.callback()
+        if self.labyrinth.finished or self.labyrinth.isVisited(self.x, self.y):
+            sys.exit()
         walkableSpots = []
         if (self.labyrinth.isFinish(self.x, self.y)):
             print(str(self.num)+': Agent found the exit at x: '+str(self.x)+', y: '+str(self.y))
-            os._exit(0)
+            self.labyrinth.finished = True
+            sys.exit()
         self.labyrinth.visit(self.x, self.y)
+        print('{}: Visiting {} {}'.format(str(self.num), self.x, self.y))
         if (self.labyrinth.isWalkable(self.x-1, self.y)):
             walkableSpots.append({'x': self.x-1, 'y': self.y})
         if (self.labyrinth.isWalkable(self.x, self.y-1)):
@@ -42,7 +46,6 @@ class Agent:
             t.start()
         if (len(walkableSpots)>1):
             for num, spot in enumerate(walkableSpots, start = 1):
-                print(str(self.num)+': Creating new agent')
                 agent = Agent(spot['x'], spot['y'], self.labyrinth, self.callback)
             self.x = walkableSpots[0]['x']
             self.y = walkableSpots[0]['y']
